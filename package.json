@@ -1,0 +1,43 @@
+{
+    "name": "@darrenjrobinson/hibp-mcp",
+    "version": "1.0.2",
+    "description": "A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API",
+    "main": "build/main.js",
+    "type": "module",
+    "bin": {
+      "hibp-mcp": "./build/main.js"
+    },
+    "files": [
+      "build",
+      "README.md"
+    ],
+    "scripts": {
+      "build": "tsc",
+      "prepublishOnly": "npm run build",
+      "test": "jest"
+    },
+    "dependencies": {
+      "@modelcontextprotocol/sdk": "^1.7.0",
+      "zod": "^3.24.2"
+    },
+    "devDependencies": {
+      "@types/jest": "^29.5.12",
+      "@types/node": "^22.13.10",
+      "jest": "^29.7.0",
+      "ts-jest": "^29.3.1",
+      "typescript": "^5.8.2"
+    },
+    "keywords": [
+      "mcp",
+      "hibp",
+      "haveibeenpwned",
+      "claude",
+      "ai"
+    ],
+    "author": "Darren J Robinson",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/darrenjrobinson/HIBP-MCP-Server.git"
+    }
+  }
