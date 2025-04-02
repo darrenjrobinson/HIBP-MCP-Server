@@ -15,7 +15,7 @@ This MCP server provides tools to interact with the Have I Been Pwned API, allow
 
 [NPM Package](https://www.npmjs.com/package/@darrenjrobinson/hibp-mcp)
 
-[Blog](https://blog.darrenjrobinson.com)
+[Blog](https://blog.darrenjrobinson.com/a-have-i-been-pwned-mcp-server-for-claude)
 
 <video width="600" controls>
   <source src="./demo/HIBP%20MCP%20Demo.mp4" type="video/mp4">
