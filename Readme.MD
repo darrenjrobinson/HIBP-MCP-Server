@@ -1,4 +1,4 @@
-# HIBP MCP Server
+# Have I Been Pwned MCP Server
 
 A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API that allows you to query breach data using natural language.
 
