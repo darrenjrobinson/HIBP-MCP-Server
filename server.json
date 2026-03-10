@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.darrenjrobinson/hibp",
+  "description": "A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API",
+  "repository": {
+    "url": "https://github.com/darrenjrobinson/HIBP-MCP-Server",
+    "source": "github"
+  },
+  "version": "1.0.3",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@darrenjrobinson/hibp-mcp",
+      "version": "1.0.3",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your Have I Been Pwned API key from https://haveibeenpwned.com/API/Key",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "HIBP_API_KEY"
+        },
+        {
+          "description": "Your HIBP API subscription plan (Pwned 1, Pwned 2, Pwned 3, Pwned 4, or Pwned 5)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false,
+          "name": "HIBP_SUBSCRIPTION_PLAN"
+        }
+      ]
+    }
+  ]
+}

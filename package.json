@@ -1,6 +1,7 @@
 {
     "name": "@darrenjrobinson/hibp-mcp",
-    "version": "1.0.2",
+    "version": "1.0.3",
+    "mcpName": "io.github.darrenjrobinson/hibp",
     "description": "A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API",
     "main": "build/main.js",
     "type": "module",
