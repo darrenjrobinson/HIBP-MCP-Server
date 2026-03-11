@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/darrenjrobinson-hibp-mcp-server-badge.png)](https://mseep.ai/app/darrenjrobinson-hibp-mcp-server)
+
 # Have I Been Pwned MCP Server
 
 A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API that allows you to query breach data using natural language.
