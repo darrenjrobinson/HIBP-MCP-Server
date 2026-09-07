@@ -1,5 +1,9 @@
 # Have I Been Pwned MCP Server
 
+[![npm version](https://img.shields.io/npm/v/@darrenjrobinson/hibp-mcp)](https://www.npmjs.com/package/@darrenjrobinson/hibp-mcp)
+[![npm downloads](https://img.shields.io/npm/dt/@darrenjrobinson/hibp-mcp)](https://www.npmjs.com/package/@darrenjrobinson/hibp-mcp)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A Model Context Protocol (MCP) server for the Have I Been Pwned (HIBP) API that allows you to query breach data using natural language.
 
 ## Overview
