@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build, test, smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check package.json and server.json agree
+        run: npm run check:version
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        # The ESM tests need the VM-modules flag; the plain `npm test` script hangs without it.
+        run: npx jest --ci --forceExit
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
+
+      - name: Stdio smoke test
+        run: npm run smoke
+
+      - name: npm audit (high and above)
+        # PR gate only. Deliberately not part of the publish workflow so a newly
+        # published advisory in an unreachable transitive dependency cannot block a release.
+        run: npm audit --audit-level=high

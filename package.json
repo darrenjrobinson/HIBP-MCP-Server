@@ -15,7 +15,9 @@
     "scripts": {
       "build": "tsc",
       "prepublishOnly": "npm run build",
-      "test": "jest"
+      "test": "jest",
+      "check:version": "node scripts/check-version.mjs",
+      "smoke": "node scripts/smoke-test.mjs"
     },
     "dependencies": {
       "@modelcontextprotocol/sdk": "^1.30.0",
