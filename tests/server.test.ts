@@ -1,5 +1,9 @@
 // tests/server.test.ts
 import { jest } from '@jest/globals';
+import { createRequire } from 'module';
+
+// The server advertises the version from package.json; assert against the same source
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
 // Manual mocks
 const mockTool = jest.fn();
@@ -61,7 +65,7 @@ describe('MCP Server', () => {
     // Verify server was created
     expect(mockMcpServer).toHaveBeenCalledWith({
       name: 'HIBP-MCP',
-      version: '1.0.2',
+      version: pkg.version,
     });
   });
 });
