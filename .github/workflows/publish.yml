@@ -1,0 +1,214 @@
+# Publishes a new version to npm (Trusted Publishing / OIDC, no token) and then to the
+# MCP Registry (GitHub Actions OIDC, no token), then tags a GitHub release.
+#
+# Triggered by any push to main that touches package.json, so merging a PR that bumps the
+# version releases it. Anything already published is skipped, so re-running is safe, and
+# a partial failure (npm succeeded, registry did not) can be completed with a re-run.
+#
+# One-time setup on npmjs.com, package @darrenjrobinson/hibp-mcp -> Settings -> Trusted Publisher:
+#   Organization or user: darrenjrobinson    Repository: HIBP-MCP-Server
+#   Workflow filename:    publish.yml        Environment: (leave blank)
+# Then Settings -> Publishing access -> "Require two-factor authentication and disallow tokens".
+# The MCP Registry needs no setup: an OIDC token from a workflow in a darrenjrobinson/* repo is
+# authorised for the io.github.darrenjrobinson/* namespace.
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+env:
+  # Bump deliberately; the tarball is fetched from the registry project's GitHub release.
+  MCP_PUBLISHER_VERSION: v1.8.1
+
+jobs:
+  check:
+    name: Check version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      name: ${{ steps.version.outputs.name }}
+      version: ${{ steps.version.outputs.version }}
+      server_name: ${{ steps.version.outputs.server_name }}
+      publish_npm: ${{ steps.version.outputs.publish_npm }}
+      publish_registry: ${{ steps.version.outputs.publish_registry }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Check package.json and server.json agree
+        run: node scripts/check-version.mjs
+
+      - name: Decide what still needs publishing
+        id: version
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          SERVER_NAME=$(node -p "require('./server.json').name")
+          {
+            echo "name=$NAME"
+            echo "version=$VERSION"
+            echo "server_name=$SERVER_NAME"
+          } >> "$GITHUB_OUTPUT"
+
+          PUBLISHED=$(npm view "$NAME@$VERSION" version 2>/dev/null || true)
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "::notice::$NAME@$VERSION is already on npm; skipping npm publish"
+            echo "publish_npm=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$NAME@$VERSION is not on npm yet; will publish"
+            echo "publish_npm=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          ENCODED=$(node -p "encodeURIComponent('$SERVER_NAME')")
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://registry.modelcontextprotocol.io/v0/servers/$ENCODED/versions/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$SERVER_NAME $VERSION is already in the MCP Registry; skipping registry publish"
+            echo "publish_registry=false" >> "$GITHUB_OUTPUT"
+          elif [ "$STATUS" = "404" ]; then
+            echo "$SERVER_NAME $VERSION is not in the MCP Registry yet; will publish"
+            echo "publish_registry=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::MCP Registry lookup returned HTTP $STATUS"
+            exit 1
+          fi
+
+  publish-npm:
+    name: Publish to npm
+    needs: check
+    if: needs.check.outputs.publish_npm == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC token for npm Trusted Publishing
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false   # never cache in a release build
+
+      - name: Ensure npm supports Trusted Publishing (>= 11.5.1)
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npx jest --ci --forceExit
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
+
+      - name: Stdio smoke test
+        run: npm run smoke
+
+      - name: Publish to npm
+        # No NODE_AUTH_TOKEN: npm detects the OIDC token. Provenance is attached automatically.
+        run: npm publish --access public
+
+  publish-mcp-registry:
+    name: Publish to MCP Registry
+    needs: [check, publish-npm]
+    if: >-
+      ${{ !cancelled()
+          && needs.check.outputs.publish_registry == 'true'
+          && (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC token for the io.github.darrenjrobinson/* namespace
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Wait for npm to serve the version
+        # The registry validates the npm package (including its mcpName field), so the new
+        # version must be visible on registry.npmjs.org before publishing.
+        env:
+          NAME: ${{ needs.check.outputs.name }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          for attempt in $(seq 1 20); do
+            if [ "$(npm view "$NAME@$VERSION" version 2>/dev/null || true)" = "$VERSION" ]; then
+              echo "npm is serving $NAME@$VERSION"
+              exit 0
+            fi
+            echo "attempt $attempt/20: $NAME@$VERSION not visible yet, waiting 15s"
+            sleep 15
+          done
+          echo "::error::npm never served $NAME@$VERSION"
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          set -euo pipefail
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_${OS}_${ARCH}.tar.gz" \
+            | tar xz mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json to MCP Registry
+        run: ./mcp-publisher publish
+
+  github-release:
+    name: Tag and GitHub release
+    needs: [check, publish-npm, publish-mcp-registry]
+    # Only when this run actually published something, so a no-op run never tags an old commit.
+    if: >-
+      ${{ !cancelled()
+          && (needs.publish-npm.result == 'success' || needs.publish-mcp-registry.result == 'success')
+          && needs.publish-npm.result != 'failure'
+          && needs.publish-mcp-registry.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists"
+            exit 0
+          fi
+          gh release create "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --generate-notes
