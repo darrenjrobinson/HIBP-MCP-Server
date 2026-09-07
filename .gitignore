@@ -1,1 +1,3 @@
 node_modules/
+.mcpregistry_*
+*.log

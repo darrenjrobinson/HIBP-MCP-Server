@@ -1,14 +1,19 @@
 #!/usr/bin/env node
+import { createRequire } from "module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { logger } from "./logger.js";
 import { RateLimiter, SUBSCRIPTION_PLANS } from "./rate-limiter.js";
 
+// Advertise the version from package.json so it cannot drift from the published package
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
+
 // Create server instance
 const server = new McpServer({
   name: "HIBP-MCP",
-  version: "1.0.2",
+  version,
 });
 
 logger.info("Starting HIBP MCP Server");
