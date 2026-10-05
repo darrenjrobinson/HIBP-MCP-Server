@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/darrenjrobinson-hibp-mcp-server-badge.png)](https://mseep.ai/app/darrenjrobinson-hibp-mcp-server)
+
 # Have I Been Pwned MCP Server
 
 [![npm version](https://img.shields.io/npm/v/@darrenjrobinson/hibp-mcp)](https://www.npmjs.com/package/@darrenjrobinson/hibp-mcp)
