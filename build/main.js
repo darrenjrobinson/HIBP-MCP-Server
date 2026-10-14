@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from "module";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
 import { logger } from "./logger.js";
 import { RateLimiter, SUBSCRIPTION_PLANS } from "./rate-limiter.js";
@@ -18,18 +18,21 @@ logger.info("Starting HIBP MCP Server");
 const subscriptionPlan = process.env.HIBP_SUBSCRIPTION_PLAN || "Pwned 1";
 const rateLimitConfig = SUBSCRIPTION_PLANS[subscriptionPlan] || SUBSCRIPTION_PLANS["Pwned 1"];
 const rateLimiter = new RateLimiter(rateLimitConfig);
-server.tool("HIBP-Breaches", "Tool to query breached accounts and breaches from the Have I Been Pwned API", {
-    operation: z.enum([
-        "getAllBreachesForAccount",
-        "getAllBreachedSites",
-        "getBreachByName",
-        "getDataClasses"
-    ]).describe("The HIBP operation to perform"),
-    account: z.string().optional().describe("Email address to check for breaches"),
-    domain: z.string().optional().describe("Domain to filter breaches by"),
-    name: z.string().optional().describe("Breach name to get details for"),
-    includeUnverified: z.boolean().optional().describe("Whether to include unverified breaches"),
-    truncateResponse: z.boolean().optional().describe("Whether to truncate the response"),
+server.registerTool("HIBP-Breaches", {
+    description: "Tool to query breached accounts and breaches from the Have I Been Pwned API",
+    inputSchema: z.object({
+        operation: z.enum([
+            "getAllBreachesForAccount",
+            "getAllBreachedSites",
+            "getBreachByName",
+            "getDataClasses"
+        ]).describe("The HIBP operation to perform"),
+        account: z.string().optional().describe("Email address to check for breaches"),
+        domain: z.string().optional().describe("Domain to filter breaches by"),
+        name: z.string().optional().describe("Breach name to get details for"),
+        includeUnverified: z.boolean().optional().describe("Whether to include unverified breaches"),
+        truncateResponse: z.boolean().optional().describe("Whether to truncate the response"),
+    }),
 }, async ({ operation, account, domain, name, includeUnverified, truncateResponse }) => {
     try {
         // Check for API key in environment
@@ -146,8 +149,11 @@ server.tool("HIBP-Breaches", "Tool to query breached accounts and breaches from 
         };
     }
 });
-server.tool("HIBP-Pastes", "Tool to query pastes containing account data from the Have I Been Pwned API", {
-    account: z.string().describe("Email address to check for pastes"),
+server.registerTool("HIBP-Pastes", {
+    description: "Tool to query pastes containing account data from the Have I Been Pwned API",
+    inputSchema: z.object({
+        account: z.string().describe("Email address to check for pastes"),
+    }),
 }, async ({ account }) => {
     try {
         // Check for API key in environment
@@ -218,8 +224,11 @@ server.tool("HIBP-Pastes", "Tool to query pastes containing account data from th
         };
     }
 });
-server.tool("HIBP-PwnedPasswords", "Tool to check if a password has been exposed in data breaches using the Pwned Passwords API", {
-    password: z.string().describe("Password to check (will be hashed locally before sending)"),
+server.registerTool("HIBP-PwnedPasswords", {
+    description: "Tool to check if a password has been exposed in data breaches using the Pwned Passwords API",
+    inputSchema: z.object({
+        password: z.string().describe("Password to check (will be hashed locally before sending)"),
+    }),
 }, async ({ password }) => {
     try {
         // Base URL for the HIBP Pwned Passwords API

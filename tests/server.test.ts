@@ -6,14 +6,14 @@ import { createRequire } from 'module';
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
 // Manual mocks
-const mockTool = jest.fn();
+const mockRegisterTool = jest.fn();
 const mockResource = jest.fn();
 const mockPrompts = jest.fn();
 const mockConnect = jest.fn();
 
 // Mock MCP Server implementation
 const mockMcpServer = jest.fn().mockImplementation(() => ({
-  tool: mockTool,
+  registerTool: mockRegisterTool,
   resource: mockResource,
   prompts: mockPrompts,
   connect: mockConnect
@@ -23,11 +23,11 @@ const mockMcpServer = jest.fn().mockImplementation(() => ({
 const mockStdioTransport = jest.fn();
 
 // Set up the mocks before importing the module under test
-jest.unstable_mockModule('@modelcontextprotocol/sdk/server/mcp.js', () => ({
+jest.unstable_mockModule('@modelcontextprotocol/server', () => ({
   McpServer: mockMcpServer
 }));
 
-jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+jest.unstable_mockModule('@modelcontextprotocol/server/stdio', () => ({
   StdioServerTransport: mockStdioTransport
 }));
 
@@ -67,5 +67,12 @@ describe('MCP Server', () => {
       name: 'HIBP-MCP',
       version: pkg.version,
     });
+
+    // Verify every tool was registered through the v2 registerTool API
+    expect(mockRegisterTool.mock.calls.map(([name]) => name)).toEqual([
+      'HIBP-Breaches',
+      'HIBP-Pastes',
+      'HIBP-PwnedPasswords',
+    ]);
   });
 });
